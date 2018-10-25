@@ -4,21 +4,31 @@ import mysql.connector
 import pprint
 import os
 import time
+import sys
 
 ost = OpenSubtitles()
+ost.user_agent = "mcduke"
 token = ost_login(ost)
-
+start = time.time()
 def request_subtitle(imdb_id):
-	search = ost.search_subtitles([{'sublanguageid':'eng', 'imdbid':imdb_id}])
+	try:
+		search = ost.search_subtitles([{'sublanguageid':'eng', 'imdbid':imdb_id}])
+	except:
+		print("time elapsed = {}".format(time.time() - start))
+		print("Encountered rate limit error. Sleeping 10...")
+		time.sleep(10)
+		return request_subtitle(imdb_id)
+	if search == None:
+		print(imdb_id)
+		return None
 	max_downloads = 0
 	result = None
 	for subtitle in search:
+		if subtitle == None:
+			continue
 		if subtitle['SubEncoding'] not in ['UTF-8', 'ASCII', 'CP1252']:
-			print('excluding this one bc encoding')
 			continue
 		if int(subtitle['SubBad']) != 0 or (int(subtitle['SubSumVotes']) > 0 and float(subtitle['SubRating']) < 8.0):
-			print('excluding this one bc bad')
-			print(subtitle['SubBad'], subtitle['SubSumVotes'], subtitle['SubRating'])
 			continue
 		
 		if int(subtitle['SubDownloadsCnt']) > max_downloads:
@@ -26,13 +36,26 @@ def request_subtitle(imdb_id):
 			result = subtitle
 		
 	return result
+	
+def download_batch(batch, file_names):
+	outdir = os.path.join(os.path.dirname(__file__), '../Subtitles_files/')
+	try:
+		ost.download_subtitles(batch, output_directory=outdir)
+	except:
+		print("Encountered rate limit error. Sleeping 10...")
+		time.sleep(10)
+		download_batch(batch, file_names)
+		return
+	for file_id in batch:
+		os.rename(os.path.join(outdir, file_id + ".srt"), os.path.join(outdir, file_names[file_id]))
 
 def get_imdb_ids():
 	cxn = mysql.connector.connect(user="nes31", database="IMDB")
 	cur = cxn.cursor()
 	
-	query = ("select substr(a.tconst,3) as imdb_id from titles a inner join ratings b on a.tconst = b.tconst "
-				"where a.titleType = 'movie' and b.numVotes > 10000 and a.isAdult = 0 and a.startYear > 1998 and a.genres not like '%Documentary%'")
+	query = ("select substr(a.tconst,3) as imdb_id, primaryTitle from titles a inner join ratings b on a.tconst = b.tconst "
+				"where a.titleType = 'movie' and b.numVotes > 10000 and a.isAdult = 0 and a.startYear > 1998 and a.genres not like '%Documentary%'"
+				"limit 100")
 				
 	cur.execute(query)
 	
@@ -40,50 +63,30 @@ def get_imdb_ids():
 	return imdb_ids
 				
 
-imdb_id = '120338'
 imdb_ids = get_imdb_ids()
+#sys.exit()
 
 file_ids = []
 file_names = {}
-for i,id in enumerate(imdb_ids):
-	subtitle = request_subtitle(id)
+for i,imdb_info in enumerate(imdb_ids):
+	imdb_id = imdb_info[0]
+	title = imdb_info[1]
+	subtitle = request_subtitle(imdb_id)
+	if subtitle == None:
+		print("Not found: {}, {}".format(title,imdb_id))
+		continue
 	file_id = subtitle.get('IDSubtitleFile')
 	file_ids.append(file_id)
-	file_names[file_id] = subtitle.get('MovieName')
-	if i % 20 == 0:
-		time.sleep(5)
-
-outdir = os.path.join(os.path.dirname(__file__), '../Subtitles_files/')
-for i in range(0,len(file_ids), 20):
-	ost.download_subtitles(file_ids[i:min(len(file_ids),i+20)], output_directory=outdir)
-#subtitle = request_subtitle(imdb_ids[0][0])
-subtitle = request_subtitle(imdb_id)
-subtitlefile_id = subtitle.get('IDSubtitleFile')
-
-outdir = os.path.join(os.path.dirname(__file__), '../Subtitles_files/')
-ost.download_subtitles([subtitlefile_id], output_directory=outdir)
-
-
-#imdb_id = '134119'
-#movie_id = '31260'
-#subtitle_id = '7225676'
-#title = 'The Dark Knight'
-
-#data = ost.search_subtitles([{'sublanguageid':'eng', 'imdbid':imdb_id}])
-
-#subtitle_id = data[0].get('IDSubtitle')
-#subtitlefile_id = data[0].get('IDSubtitleFile')
-
-#outdir = os.path.join(os.path.dirname(__file__), '../Subtitles_files/')
-
-#print(type(subtitle_id))
-
-#ost.download_subtitles([subtitlefile_id], override_filenames = {subtitle_id:"The Talented Mr Ripley.srt"}, output_directory=outdir)
-
-#pprint.pprint(ost.get_imdb_movie_details(imdb_id), width=100)
-
-#pprint.pprint(data[0], width=100)
-
-#i added some stuff
-
-# i added some more
+	file_names[file_id] = ".".join([subtitle.get('MovieName').replace(".",""), "tt" + imdb_id])
+	if i % 20 == 0 and i != 0:
+		print("i = {}, sleeping...".format(i))
+		time.sleep(10)
+		
+		
+download_limit = 20
+for i in range(0,len(file_ids), download_limit):
+	id_batch = file_ids[i:min(len(file_ids),i+download_limit)]
+	download_batch(id_batch, file_names)
+	if i % (download_limit*30) == 0 and i != 0:
+		print("i={}, sleeping...".format(i))
+		time.sleep(10)
