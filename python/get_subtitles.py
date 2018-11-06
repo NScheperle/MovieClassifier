@@ -13,10 +13,11 @@ start = time.time()
 def request_subtitle(imdb_id):
 	try:
 		search = ost.search_subtitles([{'sublanguageid':'eng', 'imdbid':imdb_id}])
-	except:
+	except Exception as e:
 		print("time elapsed = {}".format(time.time() - start))
-		print("Encountered rate limit error. Sleeping 10...")
-		time.sleep(10)
+		print("Encountered rate limit error. Sleeping 5...")
+		print(e)
+		time.sleep(5)
 		return request_subtitle(imdb_id)
 	if search == None:
 		print(imdb_id)
@@ -27,6 +28,8 @@ def request_subtitle(imdb_id):
 		if subtitle == None:
 			continue
 		if subtitle['SubEncoding'] not in ['UTF-8', 'ASCII', 'CP1252']:
+			continue
+		if subtitle['SubFormat'] != 'srt':
 			continue
 		if int(subtitle['SubBad']) != 0 or (int(subtitle['SubSumVotes']) > 0 and float(subtitle['SubRating']) < 8.0):
 			continue
@@ -41,9 +44,10 @@ def download_batch(batch, file_names):
 	outdir = os.path.join(os.path.dirname(__file__), '../Subtitles_files/')
 	try:
 		ost.download_subtitles(batch, output_directory=outdir)
-	except:
-		print("Encountered rate limit error. Sleeping 10...")
-		time.sleep(10)
+	except Exception as e:
+		print("Encountered rate limit error. Sleeping 5...")
+		print(e)
+		time.sleep(5)
 		download_batch(batch, file_names)
 		return
 	for file_id in batch:
@@ -54,7 +58,8 @@ def get_imdb_ids():
 	cur = cxn.cursor()
 	
 	query = ("select substr(a.tconst,3) as imdb_id, primaryTitle from titles a inner join ratings b on a.tconst = b.tconst "
-				"where a.titleType = 'movie' and b.numVotes > 10000 and a.isAdult = 0 and a.startYear > 1998 and a.genres not like '%Documentary%'"
+				"where a.titleType = 'movie' and b.numVotes > 10000 and a.isAdult = 0 and a.startYear > 1998 and a.genres not like '%Documentary%' "
+				"and a.tconst not in (select distinct tconst from subtitles) "
 				"limit 100")
 				
 	cur.execute(query)
@@ -80,7 +85,7 @@ for i,imdb_info in enumerate(imdb_ids):
 	file_names[file_id] = ".".join([subtitle.get('MovieName').replace(".",""), "tt" + imdb_id])
 	if i % 20 == 0 and i != 0:
 		print("i = {}, sleeping...".format(i))
-		time.sleep(10)
+		#time.sleep(10)
 		
 		
 download_limit = 20
@@ -89,4 +94,5 @@ for i in range(0,len(file_ids), download_limit):
 	download_batch(id_batch, file_names)
 	if i % (download_limit*30) == 0 and i != 0:
 		print("i={}, sleeping...".format(i))
-		time.sleep(10)
+		print("psych")
+		#time.sleep(10)
