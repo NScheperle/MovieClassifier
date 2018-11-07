@@ -4,11 +4,12 @@ library(tidytext)
 library(stringi)
 
 
-tconst_names = read.csv("C:/Users/joaqu/OneDrive/Escritorio/Text_Analysis-master/Text_Analysis/Tconst_names.csv") #the file contains 5 cols. Cols{3:5} are ignorated
-colnames(tconst_names)[1] = 'title'
+tconst_names = read.csv("C:/Users/joaqu/OneDrive/Escritorio/MovieClassifier/R_scripts/tconst_in_sql.csv", sep=',', header = F) #the file contains 5 cols. Cols{3:5} are ignorated
+tconst_names = as.data.frame(tconst_names[,-2])
+colnames(tconst_names)[1] = 'tconst'
 
 
-all_budgets = data.frame(title = rep(x = NA,dim(tconst_names)[1]), tconst = NA, budget = NA,  weekend.usa = NA, gross.usa = NA,
+all_budgets = data.frame( tconst = rep(x = NA,dim(tconst_names)[1]), budget = NA,  weekend.usa = NA, gross.usa = NA,
                          worldwide.gross = NA, ranking = NA)  #Create a DF with the parameters
 ind = 0
 #tconst ='tt0110413'
@@ -31,7 +32,7 @@ for (tconst  in tconst_names$tconst){IMDB_page = read_html(paste0('https://www.i
                                     Budgets = IMDB_text %>%
                                       stri_subset(regex= pattern) %>%
                                       stri_match_all(regex=pattern)
-                                    all_budgets$title[ind] = as.character(tconst_names$title[ind])
+                                    #all_budgets$title[ind] = as.character(tconst_names$title[ind])
                                     all_budgets$tconst[ind] = tconst
                                     
                                     if (length(Budgets) == 0){all_budgets$budget[ind] = NA
@@ -59,11 +60,10 @@ all_budgets$budget= gsub(",","",all_budgets$budget)
 all_budgets$weekend.usa= gsub(",","",all_budgets$weekend.usa)
 all_budgets$gross.usa= gsub(",","",all_budgets$gross.usa)
 all_budgets$worldwide.gross= gsub(",","",all_budgets$worldwide.gross)
-save(all_budgets, file = 'moviescripts_letterA_genre_budgets.RDA')
+all_budgets[all_budgets== NA]<-'NULL'
 
-# --------------------------------
-tconst = 'tt1485796'
-IMDB_page = read_html(paste0('https://www.imdb.com/title/',tconst,'/')) 
-one_node =  html_node(IMDB_page, xpath='//*[@id="title-overview-widget"]/div[1]/div[2]/div/div[1]/div[1]/div[1]/strong/span')
-rating = html_text(one_node)
+save(all_budgets, file = 'budget_rankig_subtitles.RDA')
+write.csv(all_budgets, file = "budget_rankig_subtitles.csv")
+
+
 
