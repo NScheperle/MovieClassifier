@@ -4,16 +4,10 @@ import mysql.connector
 
 cnx = mysql.connector.connect(user='jm622', database= 'IMDB')
 cur = cnx.cursor()
-#query1 = 'CREATE TABLE IMDB.budget_rating\ 
-        #(tconst VARCHAR(9), \
-        #budget integer,\
-        #weekend_usa integer,\
-        #gross_usa integer,\
-        #worldwide_gross integer\
-        #rating float,\
-        #PRIMARY KEY(tconst));'
+#query1 = 'CREATE TABLE IMDB.budget_rating (tconst VARCHAR(9),  budget integer, weekend_usa integer, gross_usa integer, worldwide_gross integer , rating float, PRIMARY KEY(tconst));'
 
 #cur.execute(query1)
+
 query2 = "INSERT INTO budget_rating (tconst,budget,weekend_usa,gross_usa,worldwide_gross,rating) VALUES(%s,%s,%s,%s,%s,%s);"
 
 with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
@@ -22,7 +16,7 @@ with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
         line = line.split(',')
         tconst = line[1].replace('\"','')
         budget = line[2].replace("\'",'')
-        if budget == 'NULL':
+        if budget == 'NA':
             budget = None
         else:
             try:
@@ -30,7 +24,7 @@ with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
             except:
                 pass
         w_usa = line[3].replace("\'",'')
-        if w_usa == 'NULL':
+        if w_usa == 'NA':
             w_usa = None
         else:
             try:
@@ -38,7 +32,7 @@ with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
             except:
                 pass
         g_usa = line[4].replace("\'",'')
-        if g_usa == 'NULL':
+        if g_usa == 'NA':
             g_usa = None
         else:
             try:
@@ -46,7 +40,7 @@ with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
             except:
                 pass
         world_g = line[5].replace("\'",'') 
-        if world_g == 'NULL':
+        if world_g == 'NA':
             world_g = None
         else:
             try:
@@ -60,8 +54,15 @@ with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
             pass
         
         if cont > 0:
-            cur.execute(query2,(tconst,budget,w_usa,g_usa,world_g,rating))
+            try:
+                cur.execute(query2,(tconst,budget,w_usa,g_usa,world_g,rating))
+                cnx.commit()
+                
+            except:
+                print('Repeated key')
+                pass
         cont =+ 1
+print(cont)            
 cnx.close()
 
 
