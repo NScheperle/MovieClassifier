@@ -1,3 +1,8 @@
+'''
+Once we scrapped the IMDB page, get the budgets, gross and rating of the movies (Using the R script)
+We would use this script  to uploaded that daya to the database.
+'''
+
 import os
 import re
 import mysql.connector

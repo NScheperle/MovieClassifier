@@ -1,6 +1,8 @@
 #Get the tconst of the movies on the subtitle table.
 #Save this in a file
-#Use this file to feed the R_script to scrap budget and ranking
+#Use this file to feed the R_script to scrap budget and ranking.  It could be depreciated by the bash command:
+# mysql IMDB --execute="select distinct(tconst) from subtitles" > tconst_subtitles.txt
+
 import os
 import re
 import mysql.connector
