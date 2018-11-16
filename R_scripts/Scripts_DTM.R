@@ -255,13 +255,17 @@ tidy_corpus.DTM <-  tidy_corpus %>%
 save(tidy_corpus.DTM,file = 'DTM_subtitles.Rda') 
 
 # ITF 
-tidy_tfidf<- subset %>%
-  select(tconst,text) %>%
-    unnest_tokens("word", text) %>%
-     anti_join(stop_words) %>%
-      anti_join(dict) %>%
-      count(word, tconst) %>%
-       bind_tf_idf(word, tconst, n)
+#tidy_tfidf<- subset %>%
+#  select(tconst,text) %>%
+#    unnest_tokens("word", text) %>%
+#     anti_join(stop_words) %>%
+#      anti_join(dict) %>%
+#        count(word, tconst) %>%
+#       bind_tf_idf(word, tconst, n)
+
+tidy_tfidf<- tidy_corpus %>%
+  count(word, tconst) %>%
+  bind_tf_idf(word, tconst, n)
 
 save(tidy_tfidf, file = 'Subtitle_TFIDF.rda')
 
@@ -289,6 +293,6 @@ Script_top_terms %>%
   facet_wrap(~ topic, scales = "free") +
   coord_flip()
 
-save(Script_topics,file = 'Script_topics_tidy.Rda') 
+save(Script_topics,file = 'Subt_topics_tidy.Rda') 
 
 
