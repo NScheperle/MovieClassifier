@@ -1,6 +1,8 @@
 '''
 Once we scrapped the IMDB page, get the budgets, gross and rating of the movies (Using the R script)
-We would use this script  to uploaded that daya to the database.
+We would use this script  to uploaded that data to the database.
+
+Watch out to remote all the "" from the csv file.
 '''
 
 import os
@@ -16,11 +18,16 @@ cur = cnx.cursor()
 query2 = "INSERT INTO budget_rating (tconst,budget,weekend_usa,gross_usa,worldwide_gross,rating) VALUES(%s,%s,%s,%s,%s,%s);"
 
 with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
-    cont = 0
+    cont = 0 #First values is header. We are going to skip
     for line in values:
+        print(cont) 
         line = line.split(',')
         tconst = line[1].replace('\"','')
-        budget = line[2].replace("\'",'')
+        budget = line[2].replace('"','')
+        w_usa = line[3].replace('"','')
+        g_usa = line[4].replace('"','')
+        world_g = line[5].replace('"','')
+        rating = line[6].replace('"','')
         if budget == 'NA':
             budget = None
         else:
@@ -63,8 +70,8 @@ with open('/home/jm622/budget_ranking_subtitles.csv', 'r') as values:
                 cur.execute(query2,(tconst,budget,w_usa,g_usa,world_g,rating))
                 cnx.commit()
                 
-            except:
-                print('Repeated key')
+            except Exception as e:
+                print(e)
                 pass
         cont =+ 1
 print(cont)            
