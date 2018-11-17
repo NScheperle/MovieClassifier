@@ -1,11 +1,11 @@
-# I need to to a querry in SQL to take all the subtitles we have until the moment:
-# mysql IMDB --execute="select * from subtitles " > $HOME/test_sql.txt
+
 
 # I think it ill be more smart use a python script. I will Querry every tcosnt I have and save in different files with the tcosnt.
 # In this way I could save every file in an R object and wont kill my machine. Better 925 heavy rows than 6000000+ rows to iterate
+# I USE THE get_subtitles_by_tconst.py script to do this
 
 # I need a query to get all my genre right now. 
-# #mysql IMDB --execute="select distinct(subtitles.tconst), titles.genre from subtitles 
+# #mysql IMDB --execute="select distinct(subtitles.tconst), titles.genres from subtitles 
 # left join titles on subtitles.tconst = titles.tconst" > '/home/jm622/tconst_genre.csv'
 
 install.packages('dplyr')
@@ -46,7 +46,7 @@ colnames(corpus) = c('tconst','text')
 corpus$tconst <- gsub(".txt",'', corpus$tconst)  #Removing the .txt to have the tconst.
 corpus$tconst = as.factor(corpus$tconst) #convert to factor
 
-# Selecting Proper names to delete after DONT USE --------------------------------
+# Selecting Proper names to delete after ///// DONT USE --------------------------------
 # all_names = list()
 # counter = 0 
 # for (movie in raw_scripts$text){counter = counter + 1
@@ -64,39 +64,38 @@ corpus$tconst = as.factor(corpus$tconst) #convert to factor
 ######################################################################
 
 
-# Create a dataframe with genre to add to the corpus   DONT USE  -----
+# Create a dataframe with genre to add to the corpus -----
+# This .txt is from the .csv. I need to modify by hand to adjust the format. USE th TEMPLATE file to do so.
 movies = read.delim(file = 'tconst_genres.txt', header = F, sep = '\t', col.names = c('tconst', 'Genre_1', 'Genre_2', 'Genre_3'))
 levels(as.factor(corpus$tconst)) #924 movies
 
 #Merge scripts with Movie data----
 actual_movies = merge(x = corpus, y= movies)
 
-#### Loading the file name  DONT USE ----------------------- 
-# 
-# load('all_names.rda')
-# #CREATE THE DICTIONARY!!!
-# #Ok this did not worked  need to remove some words as dont, know,want, think, come, just, like, that 
-# actual_movies$nameless.text = NA
-# 
-# counter = 0
-# for(movie in actual_movies$text[1:924]) { counter = counter + 1
-# actual_movies$nameless.text[counter] = movie
-# lista = all_names[[counter]]
-# for(name in lista){actual_movies$nameless.text[counter] = gsub(paste0('\\W',name,'\\W'),' ', actual_movies$nameless.text[counter])
-# }}
-# 
-# save(actual_movies, file =  'actual_movies_no_name.Rda')
-# #problems on certain names 171
-# all_names[[171]] = gsub(paste0(' '),'', all_names[[171]])
-# all_names[[171]] = all_names[[171]][-186]
-# #problems on certain names 689
-# all_names[[689]] = gsub(paste0(' '),'', all_names[[689]])
-# all_names[[689]] = all_names[[689]][-16]
-# actual_movies$nameless.text[689] = gsub(paste0('\\*\\*\\*\\*er!'),' ', actual_movies$nameless.text[689])
+#### DELETEING NAMES ///  DONT USE ----------------------- 
+ 
+actual_movies$nameless.text = NA
+load('all_names.rda')
+
+counter = 0
+for(movie in actual_movies$text[1:924]) { counter = counter + 1
+actual_movies$nameless.text[counter] = movie
+lista = all_names[[counter]]
+for(name in lista){actual_movies$nameless.text[counter] = gsub(paste0('\\W',name,'\\W'),' ', actual_movies$nameless.text[counter])
+}}
+
+save(actual_movies, file =  'actual_movies_no_name.Rda')
+#problems on certain names 171
+all_names[[171]] = gsub(paste0(' '),'', all_names[[171]])
+all_names[[171]] = all_names[[171]][-186]
+#problems on certain names 689
+all_names[[689]] = gsub(paste0(' '),'', all_names[[689]])
+all_names[[689]] = all_names[[689]][-16]
+actual_movies$nameless.text[689] = gsub(paste0('\\*\\*\\*\\*er!'),' ', actual_movies$nameless.text[689])
 #problems on certain names 783
-# all_names[[783]] = gsub(paste0(' '),'', all_names[[783]])
-# actual_movies$nameless.text[783] = gsub(paste0("\\'s"),' ', actual_movies$nameless.text[783])
-# all_names[[783]] = all_names[[783]][-c(25:26)]   #Dont use
+all_names[[783]] = gsub(paste0(' '),'', all_names[[783]])
+actual_movies$nameless.text[783] = gsub(paste0("\\'s"),' ', actual_movies$nameless.text[783])
+all_names[[783]] = all_names[[783]][-c(25:26)]   #Dont use
 #############################################################################################
 
 # Removing common words  DONT USE-------------
@@ -185,7 +184,7 @@ for (i in seq(1,largo)){
 # Save data unitl now
 save(actual_movies, file = 'actual_movies.rda')
 
-
+write.csv(actual_movies[,c(1,3:5,10)], file = 'actual_movies.csv') # THIS WOULD BE TO UPLOAD TO THE DATA BASE!
 # Select only one subset of my movies ----
 
 subset = actual_movies[!is.na(actual_movies$CLUSTER),]
@@ -208,7 +207,9 @@ tidy_corpus %>%
   arrange(desc(n))
 
 data("stop_words")
-words = c('dont', 'know','want', 'think', 'come', 'just', 'like', 'that', 'time', 'hey', 'yeah', 'uh', 'gonna','â', 'ª', "lt's", 'x92s', 'x95','ã','x92t', "i'ii", 'y:i', 'iâ','x92re', 'x92ll', 'x92m', "â",'ll"',"ª","itâ","ltâ","ªâ","x92ve","quã","x92d","lâ","âª","0h",'yã')  #Most popular Words 
+words = c('â', 'ª', "lt's", 'x92s', 'x95','ã','x92t', "i'ii", 'y:i', 'iâ','x92re', 'x92ll', 'x92m', "â",
+          'll"',"ª","itâ","ltâ","ªâ","x92ve","quã","x92d","lâ","âª","0h",'yã',"a'ight",'^','å',"l'm","i'â", "i'â")  #Most popular Words 
+# 'dont', 'know','want', 'think', 'come', 'just', 'like', 'that', 'time', 'hey', 'yeah', 'uh', 'gonna'
 dict = as.data.frame(words)
 colnames(dict) = 'word'
 dict$word = as.character(words)
@@ -254,45 +255,99 @@ tidy_corpus.DTM <-  tidy_corpus %>%
 
 save(tidy_corpus.DTM,file = 'DTM_subtitles.Rda') 
 
-# ITF 
-#tidy_tfidf<- subset %>%
-#  select(tconst,text) %>%
-#    unnest_tokens("word", text) %>%
-#     anti_join(stop_words) %>%
-#      anti_join(dict) %>%
-#        count(word, tconst) %>%
-#       bind_tf_idf(word, tconst, n)
+# IT-IDF -----
 
 tidy_tfidf<- tidy_corpus %>%
   count(word, tconst) %>%
   bind_tf_idf(word, tconst, n)
-
 save(tidy_tfidf, file = 'Subtitle_TFIDF.rda')
 
+#Need to add CLUSTER to the IT matrix
 
+tidy_tfidf$CLUSTER = NA
+tidy_tfidf$Genre_1 = NA
+tidy_tfidf$Genre_2 = NA
+tidy_tfidf$Genre_3 = NA
 
+tidy_tfidf$CLUSTER = with(actual_movies, CLUSTER[match(tidy_tfidf$tconst, tconst)])
+tidy_tfidf$Genre_1 = with(actual_movies, Genre_1[match(tidy_tfidf$tconst, tconst)])
+tidy_tfidf$Genre_2 = with(actual_movies, Genre_2[match(tidy_tfidf$tconst, tconst)])
+tidy_tfidf$Genre_3 = with(actual_movies, Genre_3[match(tidy_tfidf$tconst, tconst)])
+save(tidy_tfidf, file = 'Subtitle_TFIDF.rda')
 
-##### NOT USEFUL STUFF
-Script_topic_model<-LDA(tidy_corpus, k=10, control = list(seed = 253)) # 5  different topics, not supervised.
-save(Script_topic_model,file = 'First_LDA_subtitles') 
+#Cunting all my words 
+total_words = tidy_corpus %>%
+  count(word) %>%
+  arrange(desc(n))
 
-Script_topics <- tidy(Script_topic_model, matrix = "beta")
+ALL_WORDS =total_words %>%
+  select(n)%>%
+  sum()
 
-Script_top_terms <- Script_topics %>%
-  group_by(topic) %>%
-  top_n(25, beta) %>%   #Can adjust for more precision
-  ungroup() %>%
-  arrange(topic, -beta)
+# Only to graph CLUSTER
+tidy_tfidf_average_cluster = tidy_tfidf %>% 
+                      select(word,n,tf_idf,CLUSTER) %>%
+                      group_by(word,CLUSTER) %>%
+                        summarize( n_cluster = sum(n), tf_idf = mean(tf_idf))
 
+tidy_tfidf_average_cluster$Nwords = NA
+tidy_tfidf_average_cluster$Nwords = with(total_words, n[match(tidy_tfidf_average_cluster$word, word)])
 
-
-Script_top_terms %>%
-  mutate(term = reorder(term, beta)) %>%
-  ggplot(aes(term, beta, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
+# Graphic
+tidy_tfidf_average_cluster %>%
+  arrange(desc(tf_idf)) %>%
+  group_by(CLUSTER) %>% 
+  top_n(15,tf_idf) %>%
+  ungroup %>%
+  ggplot(aes(word, tf_idf, fill = CLUSTER)) +
+  geom_col(show.legend = FALSE) + labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~CLUSTER, ncol = 2, scales = "free") +  
   coord_flip()
 
-save(Script_topics,file = 'Subt_topics_tidy.Rda') 
+ggsave('subtitles_tf_idf.png', width = 6, height =  6)
+
+# Graphhing Genre
+
+freq_by_rank <- tidy_tfidf_average_cluster %>% 
+  group_by(CLUSTER) %>% 
+  mutate(rank = row_number(),`term frequency` = Nwords/ALL_WORDS)
 
 
+
+# USELESS ----
+#freq_by_rank %>% 
+  ggplot(aes(rank, `term frequency`, color = CLUSTER)) + 
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+  scale_x_log10() +
+  scale_y_log10()
+# ----
+
+ggplot(tidy_tfidf_average_cluster, aes(Nwords/ALL_WORDS, fill = CLUSTER)) +
+  geom_histogram(show.legend = FALSE) +
+  xlim(NA, 0.0009) +
+  facet_wrap(~CLUSTER, ncol = 2, scales = "free_y")   #Terror (cluster5) and Sci-Fi  (cluster2) use more infrequent words.
+
+ggsave('subtitles_rank_per_cluster.png', width = 6, height =  6)
+
+  ##### NOT USEFUL STUFF -----
+#Script_topic_model<-LDA(tidy_corpus, k=10, control = list(seed = 253)) # 5  different topics, not supervised.
+#save(Script_topic_model,file = 'First_LDA_subtitles') 
+#
+#Script_topics <- tidy(Script_topic_model, matrix = "beta")
+#
+#Script_top_terms <- Script_topics %>%
+#  group_by(topic) %>%
+#  top_n(25, beta) %>%   #Can adjust for more precision
+#  ungroup() %>%
+#  arrange(topic, -beta)
+#
+#
+#
+#Script_top_terms %>%
+#  mutate(term = reorder(term, beta)) %>%
+#  ggplot(aes(term, beta, fill = factor(topic))) +
+#  geom_col(show.legend = FALSE) +
+#  facet_wrap(~ topic, scales = "free") +
+#  coord_flip()
+#
+#save(Script_topics,file = 'Subt_topics_tidy.Rda') 
