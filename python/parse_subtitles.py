@@ -64,12 +64,14 @@ def parse_file(fn):
 				times = times_line.split(" --> ")
 				try:
 					start_datetime = datetime.datetime.strptime(times[0],'%H:%M:%S,%f')
-				except ValueError:
+				except ValueError as e:
+					#print(e)
 					start_datetime = datetime.datetime.strptime(times[0],'%H:%M:%S.%f')
 				start_time = datetime.timedelta(hours=start_datetime.hour,minutes=start_datetime.minute,seconds=start_datetime.second, microseconds=start_datetime.microsecond).total_seconds()
 				try:
 					end_datetime = datetime.datetime.strptime(times[1],'%H:%M:%S,%f')
-				except ValueError:
+				except ValueError as e:
+					#print(e)
 					end_datetime = datetime.datetime.strptime(times[1],'%H:%M:%S.%f')
 				end_time = datetime.timedelta(hours=end_datetime.hour,minutes=end_datetime.minute,seconds=end_datetime.second, microseconds=end_datetime.microsecond).total_seconds()
 
@@ -80,10 +82,18 @@ def parse_file(fn):
 			
 
 	cnx.commit()
-	
+
+i = 1
 for file in os.listdir("./Subtitles_files"):
+	print(i)
+	i += 1
 	fn = os.path.join(os.path.dirname(__file__), '../Subtitles_files/'+file)
-	parse_file(fn)
+	try:
+		parse_file(fn)
+	except Exception as e:
+		print(e)
+		print("{} fuct up dawg {}".format(fn, file))
+		sys.exit()
 
 
 			
