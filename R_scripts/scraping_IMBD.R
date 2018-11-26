@@ -15,10 +15,9 @@ rownames(tconst_names) <- NULL
 
 
 
-
 load('RDA_objects/budget_ranking_subtitles.RDA')
-ind = dim(all_budgets)[1]  # I START  ON MY LAST ROW SO I DONT SCRAP MORE THAN NEEDED
-all_budgets[c((dim(all_budgets[1])+ 1):dim(tconst_names[1])),]= NA    #This is neccesary to start on the last place the table ended
+ind = dim(all_budgets)[1]  # I START ON MY LAST ROW SO I DONT SCRAP MORE THAN NEEDED
+all_budgets[c((dim(all_budgets[1])+ 1):dim(tconst_names[1])),]= NA  #This is neccesary to start on the last place the table ended
 
 # I can load the RDA object subtitles_all_budget.RDA
 # So, in this way I dont need to scrap all the things that I have already scrapped.
@@ -30,10 +29,11 @@ for (tconst  in tconst_names$tconst[-c(1:ind)]){IMDB_page = read_html(paste0('ht
                                     IMDB_text = html_text(one_node)
                                     pattern <- '(\\w* \\w+): *\\$([\\d\\,]+)' 
                                     #Regex patter to select only the budget. Possible problem with international movies
-                                    
                                     second_node =  html_node(IMDB_page, xpath='//*[@id="title-overview-widget"]/div[1]/div[2]/div/div[1]/div[1]/div[1]/strong/span')
                                     ranking = html_text(second_node)
                                     #Getting ranking
+                                    one_node = html_node(IMDB_page, xpath='//*[@id="title-overview-widget"]/div[2]/div[1]/div[2]/a')
+                                    IMDB_director = html_text(one_node)
                                     
                                     ind = ind + 1
                                     if (length(ranking) == 0){all_budgets$ranking[ind] = NA}
@@ -75,4 +75,34 @@ save(all_budgets, file = 'budget_ranking_subtitles.RDA')
 write.csv(all_budgets,file = 'budget_ranking_subtitles.csv')   #WE USE THIS FILE TO UPLOAD THE DATA TO THE DATABASE!
 # --------------------------------
 
+#getting directors and actors
 
+library(RMySQL)
+library(caTools)
+mydb = dbConnect(MySQL(), user = 'jm622', dbname ='IMDB', host = 'vcm-5368.vm.duke.edu')
+dbListTables(mydb)
+query <- function(...) dbGetQuery(mydb, ...)
+director = query("create table temp as select tconst,nconst,category from principals where (tconst in (select distinct(tconst) from subtitles)) AND (principals.category = 'director');")
+director_name = query("select a.*, b.primaryName from temp a left join names b on a.nconst=b.nconst;")
+
+director_name_tidy = director_name %>% 
+                  group_by(tconst) %>%
+                    #mutate(primaryName = paste(primaryName, collapse = ",")) %>%
+                    mutate(nconst = paste(nconst, collapse = ","))
+
+director_name_tidy = director_name_tidy %>% 
+  group_by(tconst) %>%
+  slice(1)
+
+
+actors= query("create table temp as select tconst,nconst,category from principals where (tconst in (select distinct(tconst) from subtitles)) AND (principals.category = 'actor' OR category = 'actress');")
+actors_name = query("select a.*, b.primaryName from temp a left join names b on a.nconst=b.nconst;")
+
+actors_name_tidy = actors_name %>% 
+  group_by(tconst) %>%
+  mutate(primaryName = paste(primaryName, collapse = ",")) %>%
+  mutate(nconst = paste(nconst, collapse = ","))
+
+actors_name_tidy = actors_name_tidy %>% 
+  group_by(tconst) %>%
+  slice(1)
