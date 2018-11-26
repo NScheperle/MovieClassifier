@@ -41,6 +41,7 @@ def request_subtitle(imdb_id):
 	return result
 	
 def download_batch(batch, file_names):
+	print(batch, file_names)
 	outdir = os.path.join(os.path.dirname(__file__), '../Subtitles_files/')
 	try:
 		ost.download_subtitles(batch, output_directory=outdir)
@@ -51,7 +52,10 @@ def download_batch(batch, file_names):
 		download_batch(batch, file_names)
 		return
 	for file_id in batch:
-		os.rename(os.path.join(outdir, file_id + ".srt"), os.path.join(outdir, file_names[file_id]))
+		try:
+			os.rename(os.path.join(outdir, file_id + ".srt"), os.path.join(outdir, file_names[file_id]))
+		except FileNotFoundError:
+			print("File for {} not found. File ID = {}".format(file_names[file_id], file_id))
 
 def get_imdb_ids():
 	cxn = mysql.connector.connect(user="nes31", database="IMDB")
@@ -60,7 +64,7 @@ def get_imdb_ids():
 	query = ("select substr(a.tconst,3) as imdb_id, primaryTitle from titles a inner join ratings b on a.tconst = b.tconst "
 				"where a.titleType = 'movie' and b.numVotes > 10000 and a.isAdult = 0 and a.startYear > 1998 and a.genres not like '%Documentary%' "
 				"and a.tconst not in (select distinct tconst from subtitles) "
-				"limit 100")
+				"limit 250	")
 				
 	cur.execute(query)
 	
@@ -92,6 +96,8 @@ download_limit = 20
 for i in range(0,len(file_ids), download_limit):
 	id_batch = file_ids[i:min(len(file_ids),i+download_limit)]
 	download_batch(id_batch, file_names)
+	print("Sleeping a few seconds to wait for download...")
+	time.sleep(3)
 	if i % (download_limit*30) == 0 and i != 0:
 		print("i={}, sleeping...".format(i))
 		print("psych")
