@@ -27,7 +27,7 @@ plot(dendrogram,
      ylab = 'Euclidean distances')
 
 # Fitting Hierarchical Clustering to the dataset
-hc = hclust(d = dist(df, method = 'euclidean'), method = 'ward.D')
+
 hc = hclust(d = dist(df, method = 'euclidean'), method = 'ward.D')
 
 
@@ -48,6 +48,62 @@ names(dend_data)
 # Extract data for line segments
 head(dend_data$segments)
 
+
+install.packages("dendextend")
+library(dendextend)
+
+
+# get the labels of the tree
+dendrogram %>% labels
+
+# get the number of leaves of the tree
+dendrogram %>% nleaves
+
+dendrogram%>% nnodes # get the number of nodes in the tree (including leaves)
+
+
+
+
+hc = hclust(d = dist(df, method = 'euclidean'), method = 'ward.D')
+mycl <- cutree(hc, h=max(hc$height/1.5))
+
+# get a color palette equal to the number of clusters
+clusterCols <- rainbow(length(unique(mycl)))
+
+# create vector of colors for side bar
+myClusterSideBar <- clusterCols[mycl]
+
+# choose a color palette for the heat map
+myheatcol <- rev(redgreen(75))
+install.packages("gplots")
+library(gplots)
+# draw the heat map
+heatmap.2(d, main="Hierarchical Cluster", Rowv=as.dendrogram(hc), Colv=NA, dendrogram="row", scale="row", col=red, density.info="none", trace="none")
+
+# cutree returns a vector of cluster membership
+# in the order of the original data rows
+# examine it
+mycl
+
+# examine the cluster membership by it's order
+# in the heatmap
+mycl[hc$order]
+
+# grab a cluster
+cl_1 <- df[mycl == 1,]
+
+# or simply add the cluster ID to your data
+foo <- cbind(df, clusterID=mycl)
+
+# examine the data with cluster ids attached, and ordered like the heat map
+foo[hr$order,]
+
+dend <- as.dendrogram(hclust(dist(df)))
+# Like: 
+
+
+# midpoint for all nodes
+get_nodes_attr(dend, "midpoint")
 
 
 ---------------------------still working-----------------
