@@ -110,6 +110,9 @@ names(tempsent)<-c('tconst','vec1','vec2','vec3','vec4','vec5','vec6','vec7','ve
                    'vec11','vec12','vec13','vec14','vec15','vec16','vec17','vec18','vec19','vec20',
                    'vec21','vec22','vec23','vec24','vec25','vec26','vec27','vec28','vec29','vec30',
                    'vec31','vec32','vec33','vec34','vec35','vec36','vec37','vec38','vec39','vec40')
+for(i in 2:41){
+  sentiment[,i] <- as.numeric(sentiment[,i])
+}
 
 dbListTables(mydb)
 dbWriteTable(mydb, "sentiment", tempsent, overwrite = TRUE, append = FALSE,field.types)
