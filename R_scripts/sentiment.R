@@ -60,7 +60,6 @@ if (movielen>=925 && movielen <=2000){
   tempsent<-as.data.frame(t(c(movieid,as.matrix(subs_sentvec$sentiment))))
   flagmovie = flagmovie +1
   flag=flag+movielen
-  }
 }
 
 for (i in flagmovie:nrow(nm)) {
