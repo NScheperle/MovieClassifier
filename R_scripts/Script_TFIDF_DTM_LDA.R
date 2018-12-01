@@ -26,6 +26,7 @@ library(tidytext)
 library(ggplot2)
 library(readtext)
 library(cleanNLP)
+library(stringi)
 cnlp_init_udpipe()
 
 
@@ -141,12 +142,14 @@ numero = actual_movies %>%
   select(tconst,num.lines) %>%
   arrange((num.lines))
 
+actual_movies = actual_movies[actual_movies$num.lines > 500,]  # deleting movies with short dialogues
+
 #lets remove shorter movies
 
      #actual_movies = actual_movies[actual_movies$num.lines > 800,]
 
 # Save data unitl now
-save(actual_movies, file = 'actual_movies.rda')
+save(actual_movies, file = 'RAW_actual_movies.rda')
 
 write.csv(actual_movies[,c(1,3:5,9)], file = 'actual_movies.csv') # THIS WOULD BE TO UPLOAD TO THE DATA BASE!
 # Select only one subset of my movies ----
@@ -172,11 +175,15 @@ tidy_corpus %>%
 
 data("stop_words")
 words = c('?', '?', "lt's", 'x92s', 'x95','?','x92t', "i'ii", 'y:i', 'i?','x92re', 'x92ll', 'x92m', "?",
-          'll"',"?","it?","lt?","??","x92ve","qu?","x92d","l?","??","0h",'y?',"a'ight",'^','?',"l'm","i'?","â" ,"i'?"
-          ,'^','ª','ã','å','a.a','a.b','a.b.c', "ð","î","de","ng","tð","harri","thðµ","nã","yð","hð","ll","tñ","ðµ","wð","estã","nñ","yous",
-          "para","nð","fã","lð","fð","uñ","mð","det","en","dð","um","thð",'ñ','aii', 'iik','iâ','yeah','gonna', 'hey') 
+          'll"',"?","it?","lt?","??","x92ve","qu?","x92d","l?","??","0h",'y?',"a'ight",'^','?',"l'm","i'?","?" ,"i'?"
+          ,'^','?','?','?','a.a','a?','^','a.b','a.b.c', "?","?","de","ng","t?","harri","th??","n?","y?","h?","ll","t?","??","w?","est?","n?","yous",
+          "para","n?","f?","l?","f?","u?","m?","det","en","d?","um","th?",'?','aii', 'iik','i?',
+          'yeah','gonna', 'hey','z??','z??n?','?but','?for','?jump','?just','?mi','?now','?w??','??','??','??tre','????n',
+'??es','??ltima','??ltimo','??nica','??nico','???o','?ozeyir','?zuayip','?ato', 'time','guy','day','god','gotta','dont',
+'know','want', 'think', 'come', 'just', 'like', 'that', 'time', 'hey', 'yeah', 'uh', 'gonna') 
+
 #Most popular Words 
-# 'dont', 'know','want', 'think', 'come', 'just', 'like', 'that', 'time', 'hey', 'yeah', 'uh', 'gonna'
+# 
 dict = as.data.frame(words)
 colnames(dict) = 'word'
 dict$word = as.character(words)
@@ -198,24 +205,33 @@ tidy_corpus<-tidy_corpus %>%
 
 
 ############
-#I wil try to trim all the words below than 1 word appearence
+#I wil try to trim all the words below than 3 word appearence
 number_words = tidy_corpus %>%
   count(word) %>%
   arrange(desc(n))
 
-number_words = number_words$word[number_words$n > 1]
+number_words = number_words$word[number_words$n > 3]
 summary(number_words)
 
 tidy_corpus = tidy_corpus %>%
   filter(word %in% number_words)
 
 tidy_corpus = tidy_corpus %>% #removing words from dictionary
-  filter(word %in% words)
+  filter(!word %in% words)
+
+#Remove non Latin words
+tidy_corpus = tidy_corpus[stri_enc_isascii(tidy_corpus$word),]
 
 #tidy_corpus = tidy_corpus[c(1,6)]
 ###########
 
 save(tidy_corpus, file = "Subtitles_tidy_corpus.rda")
+
+load('RDA_objects/Subtitles_tidy_corpus.rda')
+#Selecting only cluster 1,3,4
+        tidy_corpus = tidy_corpus %>%
+             filter(CLUSTER == 1 |CLUSTER == 3|CLUSTER == 4)
+
 
 tidy_corpus %>%
   count(word) %>%
@@ -234,15 +250,17 @@ tidy_tfidf$CLUSTER = NA
 tidy_tfidf$Genre_1 = NA
 tidy_tfidf$Genre_2 = NA
 tidy_tfidf$Genre_3 = NA
-
+#load('RDA_objects/RAW_actual_movies.rda')
 tidy_tfidf$CLUSTER = with(actual_movies, CLUSTER[match(tidy_tfidf$tconst, tconst)])
 tidy_tfidf$Genre_1 = with(actual_movies, Genre_1[match(tidy_tfidf$tconst, tconst)])
 tidy_tfidf$Genre_2 = with(actual_movies, Genre_2[match(tidy_tfidf$tconst, tconst)])
 tidy_tfidf$Genre_3 = with(actual_movies, Genre_3[match(tidy_tfidf$tconst, tconst)])
 save(tidy_tfidf, file = 'Subtitle_TFIDF.rda')
+#save(tidy_tfidf, file = 'tf123.RDA')
 
-#Cunting all my words 
+#Counting all my words 
 total_words = tidy_corpus %>%
+  filter(CLUSTER == 3)%>%
   count(word) %>%
   arrange(desc(n))
 
@@ -288,12 +306,14 @@ ggsave('subtitles_rank_per_cluster.png', width = 6, height =  6)
 
 
 
-  ##### NOT USEFUL STUFF -----
+
+### TOPIC MODELING 
+
 library(topicmodels)
 library(tm)
 # DTM
 tidy_corpus_simple = tidy_corpus[-c(2:5)]
-tidy_corpus_simple$tconst = as.character(levels(tidy_corpus_simple$tconst)[tidy_corpus_simple$tconst])
+tidy_corpus_simple$tconst = as.character(levels(tidy_corpus_simple$tconst)[tidy_corpus_simple$tconst]) #need to remove facors
 tidy_corpus.DTM <-  tidy_corpus_simple %>%
   count(tconst, word) %>%
   cast_dtm(tconst,word,n)
@@ -301,8 +321,8 @@ tidy_corpus.DTM <-  tidy_corpus_simple %>%
 save(tidy_corpus.DTM,file = 'DTM_subtitles.Rda') 
 
 #LDA
-Script_topic_model<-LDA(tidy_corpus.DTM, k=7, control = list(seed = 123)) # 5  different topics, not supervised.
-save(Script_topic_model,file = 'First_LDA_subtitles') 
+Script_topic_model<-LDA(tidy_corpus.DTM, k=5, control = list(seed = 123)) # 5  different topics, not supervised.
+save(Script_topic_model,file = 'minus3_LDA_subtitles') 
 
 Script_topics <- tidy(Script_topic_model, matrix = "beta")
 
@@ -319,25 +339,59 @@ LDA_topics = Script_top_terms %>%
   facet_wrap(~ topic, scales = "free") +
   coord_flip()
 
-ggsave(plot = LDA_topics,filename = 'LDA_subtitles_v6.png')
+ggsave(plot = LDA_topics,filename = 'LDA_subtitles_v7.png')
 
 save(Script_topics,file = 'Subt_topics_tidy.Rda') 
 
 
-#################
-
-# Structural Topic Modeling ----
+##### Structural Topic Modeling ----
 processed <- textProcessor(subset$text,metadata = subset)
 
-docs <- out$documents
-vocab <- out$vocab
-meta <- out$meta
+#docs <- out$documents
+#vocab <- out$vocab
+#meta <- out$meta
 
 out <- prepDocuments(processed$documents,processed$vocab, processed$meta)
 
 First_STM <- stm(documents = out$documents, vocab = out$vocab,
-                 K = 20, prevalence =~ CLUSTER, content = ~CLUSTER,
+                 K = 15, prevalence =~ CLUSTER,
                  max.em.its = 75, data = out$meta,
-                 init.type = "Spectral", verbose = FALSE)
+                 init.type = "Spectral", verbose = TRUE)
+
+# content =~ CLUSTER not setted as in Chris example. Ask him.
 plot(First_STM)
-plot(First_STM, type = "perspectives", topics = c(1,7))
+plot(First_STM, type = "perspectives", topics = c(1,2))
+plot(First_STM, type = "perspectives", topics = c(1,3))
+plot(First_STM, type = "perspectives", topics = c(1,4))
+plot(First_STM, type = "perspectives", topics = c(1,5))
+plot(First_STM, type = "perspectives", topics = c(5,2))
+plot(First_STM, type = "perspectives", topics = c(5,3))
+plot(First_STM, type = "perspectives", topics = c(5,4))
+plot(First_STM, type = "perspectives", topics = c(5,1))
+save(First_STM, file = '15_STM_subtitles.Rda')
+
+load(file = 'First_STM_subtitles.Rda')
+
+# A test to see the possible K
+findingk <- searchK(out$documents, out$vocab, K = c(7:10),
+                    prevalence =~ CLUSTER, data = out$meta, verbose=TRUE)
+
+
+save(findingk, file = 'findingk_subtitles.rda')
+
+load( file = 'findingk_subtitles.rda')
+plot(findingk)
+
+#################  getting more genre
+#Action,war,wester
+query ("create table clus2 as select tconst from genres where genre IN ('Action','Western','War')  and genre NOT in ('Horror','Crime','Mystery','Thriller','Sci-Fi','Adventure','Fantasy','Animation','Drama','Comedy','Romance','Family','Sport','Musical');")
+query("select titles.tconst,startYear from titles inner join clus2 on titles.tconst = clus.tconst where titles.startYear > 1997 and titles.startYear < 2017 and titles.titleType = 'movie';")
+
+#Horror
+query ("create table temp as select tconst from genres where genre = 'Horror' and genre NOT in ('Crime','Mystery','Thriller','Sci-Fi','Adventure','Fantasy','Animation','Action','Western','War','Drama','Comedy','Romance','Family','Sport','Musical');")
+query("select titles.tconst,startYear from titles inner join temp on titles.tconst = temp.tconst where titles.startYear > 1997 and titles.startYear < 2017 and titles.titleType = 'movie';")
+
+#Animation
+query ("create table anima as select tconst from genres where genre = 'Animation'  and genre NOT in ('Horror','Western','War','Crime','Mystery','Thriller');")
+query("create table animation as select titles.tconst,startYear,primaryTitle from titles inner join clus2 on titles.tconst = clus.tconst where titles.startYear > 1997 and titles.startYear < 2017 and titles.titleType = 'movie';")
+mysql IMDB --execute=" SELECT a.tconst,a.primaryTitle, b.numVotes FROM animation a inner join ratings b  on a.tconst = b.tconst ORDER BY b.numVotes DESC" > '/home/jm622/animation.txt'
