@@ -40,10 +40,9 @@ ggplot(pct_var, aes(x=num_clusters, y=pct_var)) +
   theme_bw()
 
 ##k means
-
 require(MASS)
 require(dplyr)
-result <- df %>% set.seed(1010103)
+set.seed(1010103)
 km <- kmeans(ratings_pca, centers=4, nstart=50)
 km$size
 centers <- data.frame(km$centers)
